@@ -42,6 +42,17 @@ object TagSim {
       }
     }.toDF("rec_id", "rec_ver", "designer", "tags")
 
+    //获取主题资源热度数据集
+    val themeHeatInfoDF = themeHeatInfoRDD.map {
+      line => {
+        val arr = line.split(" ")
+        val theme_id = arr(0)
+        val theme_ver = arr(1)
+        val down_cnt = arr(2)
+        (theme_id, theme_ver, down_cnt)
+      }
+    }.toDF("theme_id", "theme_ver", "down_cnt")
+
     //定义列的权重
     val colWeight = "designer:1,tags:2"
 
@@ -70,6 +81,20 @@ object TagSim {
     }
 
     roundColWeightScoreDF.show()
+
+    //考虑热度因素，进行最终得分计算
+    val colWeightAndHeatScoreDF = colWeightAndHeatScore(roundColWeightScoreDF,themeHeatInfoDF)
+    colWeightAndHeatScoreDF.show()
+  }
+
+  def colWeightAndHeatScore(roundColWeightScoreDF: DataFrame, themeHeatInfoDF: DataFrame) = {
+    import org.apache.spark.sql.functions._
+    roundColWeightScoreDF.join(themeHeatInfoDF.toDF("rec_id","theme_ver", "down_cnt"),Seq("rec_id","theme_ver"))
+      .select("theme_id", "theme_ver", "rec_id", "score", "down_cnt")
+      .withColumn("_rank",
+        row_number().over(Window.partitionBy(col("theme_id"), col("theme_ver")).orderBy(desc("score"), desc("down_cnt"))))
+      .withColumn("new_score", col("_rank")/10)
+      .selectExpr("theme_id", "theme_ver", "rec_id", "score", "down_cnt", "1-new_score")
   }
 
   def roundColWeightScore(roundColWeightScoreDF: DataFrame,roundColWeightDF: DataFrame, w: Double,spark: SparkSession) = {
@@ -98,7 +123,6 @@ object TagSim {
 
     rank
   }
-
 
   def roundColWeight(themeInfoDF: DataFrame, themeCandidateDF: DataFrame, c: String) = {
     val themeDF = themeInfoDF.select("theme_id","theme_ver",c).toDF("theme_id","theme_ver","theme_tag")
