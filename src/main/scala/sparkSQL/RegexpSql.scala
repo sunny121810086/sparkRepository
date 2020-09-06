@@ -43,7 +43,14 @@ object RegexpSql {
     val sql02 = "select substr('qwerdf',length('qwerdf'),1)"
     val sql03 = "select substr('qwerdf',-1,1)"
 
-    spark.sql(sql03).show()
+    //匹配18位身份证号
+    val sql04 =
+      """
+        |select regexp_extract('342601199610014321','^(\\d{6})(\\d{4})(\\d{2})(\\d{2})(\\d{3})([0-9]|X)$',0) as idCard,--匹配身份证号
+        |regexp_extract('http://www.baidu.com','[a-zA-z]+://[^\s]*',0) as url --匹配网址URL
+      """.stripMargin
+
+    spark.sql(sql04).show()
 
     spark.stop()
   }
