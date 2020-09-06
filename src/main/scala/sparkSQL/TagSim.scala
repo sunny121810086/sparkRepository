@@ -75,9 +75,9 @@ object TagSim {
 
     var roundColWeightScoreDF = themeAndRecInfoDF.withColumn("score",lit(0.0)).select("theme_id","theme_ver","rec_id","score")
 
+    //循环进行加权得分，计算标签相似度
     for ((c,w) <- colWeightMap) {
-      val roundColWeightDF = roundColWeight(themeInfoDF,themeCandidateDF,c)
-      roundColWeightScoreDF = roundColWeightScore(roundColWeightScoreDF,roundColWeightDF,w,spark)
+      roundColWeightScoreDF = roundColWeightScore(roundColWeightScoreDF,themeInfoDF.select("theme_id","theme_ver",c),w)
     }
 
     roundColWeightScoreDF.show()
@@ -87,6 +87,34 @@ object TagSim {
     colWeightAndHeatScoreDF.show()
   }
 
+  def roundColWeightScore(roundColWeightScoreDF: DataFrame, themeInfoDF: DataFrame, w: Double) = {
+    import themeInfoDF.sparkSession.implicits._
+    import org.apache.spark.sql.functions._
+    var rank = roundColWeightScoreDF.join(themeInfoDF.toDF("theme_id", "theme_ver", "theme_tag"), Seq("theme_id", "theme_ver"))
+      .join(themeInfoDF.toDF("rec_id", "theme_ver", "rec_tag"), Seq("rec_id", "theme_ver"))
+      .select("theme_id", "theme_ver", "rec_id", "theme_tag", "rec_tag", "score")
+      .map {
+        case Row(theme_id: String, theme_ver: String, rec_id: String, theme_tag: String, rec_tag: String, score: Double) => {
+          val themeSet = theme_tag.split("\\|").toSet
+          val recSet = rec_tag.split("\\|").toSet
+          var sim = 0.0
+          if (!themeSet.isEmpty && !recSet.isEmpty) {
+            sim = w * themeSet.intersect(recSet).size / themeSet.union(recSet).size
+          }
+          val new_score = score + sim
+          (theme_id, theme_ver, rec_id, new_score)
+        }
+      }.toDF("theme_id", "theme_ver", "rec_id", "score")
+
+    rank = rank.withColumn("_rank",
+      row_number().over(Window.partitionBy("theme_id","theme_ver").orderBy(desc("score"))))
+      .filter(col("_rank") <= 10)
+        .drop("_rank")
+        .select("theme_id", "theme_ver", "rec_id", "score")
+
+    rank
+  }
+
   def colWeightAndHeatScore(roundColWeightScoreDF: DataFrame, themeHeatInfoDF: DataFrame) = {
     import org.apache.spark.sql.functions._
     roundColWeightScoreDF.join(themeHeatInfoDF.toDF("rec_id","theme_ver", "down_cnt"),Seq("rec_id","theme_ver"))
@@ -94,42 +122,7 @@ object TagSim {
       .withColumn("_rank",
         row_number().over(Window.partitionBy(col("theme_id"), col("theme_ver")).orderBy(desc("score"), desc("down_cnt"))))
       .withColumn("new_score", col("_rank")/10)
-      .selectExpr("theme_id", "theme_ver", "rec_id", "score", "down_cnt", "1-new_score")
-  }
-
-  def roundColWeightScore(roundColWeightScoreDF: DataFrame,roundColWeightDF: DataFrame, w: Double,spark: SparkSession) = {
-    import spark.implicits._
-    import org.apache.spark.sql.functions._
-    var rank = roundColWeightDF.map {
-      case Row(theme_id: String, theme_ver: String, rec_id: String, theme_tag: String, rec_tag: String) => {
-        val themeSet = theme_tag.split("\\|").toSet
-        val recSet = rec_tag.split("\\|").toSet
-
-        val score = w * themeSet.intersect(recSet).size / themeSet.union(recSet).size
-        (theme_id, theme_ver, rec_id, score)
-      }
-    }.toDF("theme_id", "theme_ver", "rec_id", "score")
-
-    rank = rank.join(roundColWeightScoreDF,Seq("theme_id","theme_ver","rec_id"))
-        .select(rank("theme_id"),rank("theme_ver"),rank("rec_id"),rank("score"),roundColWeightScoreDF("score").as("tmp_score"))
-        .withColumn("new_score",col("score")+col("tmp_score"))
-        .select("theme_id","theme_ver","rec_id","new_score")
-        .toDF("theme_id","theme_ver","rec_id","score")
-
-    rank = rank.withColumn("_rank",
-      row_number().over(Window.partitionBy(col("theme_id"),col("theme_ver")).orderBy(desc("score"))))
-      .where(col("_rank")<=10)
-      .drop("_rank")
-
-    rank
-  }
-
-  def roundColWeight(themeInfoDF: DataFrame, themeCandidateDF: DataFrame, c: String) = {
-    val themeDF = themeInfoDF.select("theme_id","theme_ver",c).toDF("theme_id","theme_ver","theme_tag")
-    val recDF = themeCandidateDF.select("rec_id","rec_ver",c).toDF("rec_id","rec_ver","rec_tag")
-    themeDF.join(recDF,themeDF("theme_ver")===recDF("rec_ver"),"left")
-      .filter(themeDF("theme_id") =!= recDF("rec_id"))
-      .select(themeDF("theme_id"),themeDF("theme_ver"),recDF("rec_id"),themeDF("theme_tag"),recDF("rec_tag"))
+      .selectExpr("theme_id", "theme_ver", "rec_id", "score", "down_cnt", "1-new_score as score")
   }
 
 }
