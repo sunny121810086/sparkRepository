@@ -26,38 +26,71 @@ object BayesParam {
         val exposure_users = arr(4)
         val click_users = arr(5)
         val payment_users = arr(6)
-        (groupId, themeId, theme_ver, price_level, exposure_users, click_users, payment_users)
+        val payment_amt = arr(7)
+        (groupId, themeId, theme_ver, price_level, exposure_users, click_users, payment_users, payment_amt)
       }
-    }.toDF("groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users")
+    }.toDF("groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", "payment_amt")
 
     import org.apache.spark.sql.functions._
 
-    val themeInfoCtrDF = themeInfoDF.withColumn("ctr", col("click_users") / col("exposure_users"))
-      .selectExpr("groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", "ctr")
-
-
-    //计算平均数mean和方差variance
     val key = "key"
-    val meanAndVarianceMap: Map[String, Array[Double]] = evaluateMeanAndVariance(key, themeInfoCtrDF)
-    val alphaAndBetaMap: Map[String, Array[Double]] = evaluateAlphaAndBeta(meanAndVarianceMap)
+    val values = Array("ctr", "cvr", "ctcvr", "arpu")
 
-    //通过实名函数定义UDF
-    val getMeanUDF = udf((key: String) => meanAndVarianceMap.getOrElse(key, Array(0.0, 0.0))(0))
-    val getVarianceUDF = udf((key: String) => meanAndVarianceMap.getOrElse(key, Array(0.0, 0.0))(1))
-    val getAlphaUDF = udf((key: String) => alphaAndBetaMap.getOrElse(key, Array(0.0, 0.0))(0))
-    val getBetaUDF = udf((key: String) => alphaAndBetaMap.getOrElse(key, Array(0.0, 0.0))(1))
+    val themeInfoCtrDF = themeInfoDF.withColumn(key, concat_ws("-", col("groupId"), col("theme_ver")))
+      .withColumn("ctr", col("click_users") / col("exposure_users"))
+      .withColumn("cvr", col("payment_users") / col("click_users"))
+      .withColumn("ctcvr", col("payment_users") / col("exposure_users"))
+      .withColumn("arpu", col("payment_amt") / col("exposure_users"))
+      .selectExpr(key, "groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", "payment_amt","ctr", "cvr", "ctcvr", "arpu")
 
-    val tmp_themeInfoCtrDF = themeInfoCtrDF.withColumn(key, concat_ws("-", col("groupId"), col("theme_ver")))
+    //获取分组key的ctr、cvr、ctcvr、arpu指标的alpha、beta参数
+    var tmp_themeInfoCtrDF = themeInfoCtrDF.select(key).distinct()
 
-    tmp_themeInfoCtrDF.withColumn("mean", getMeanUDF(col(key)))
-      .withColumn("variance", getVarianceUDF(col(key)))
-      .withColumn("alpha", getAlphaUDF(col(key)))
-      .withColumn("beta", getBetaUDF(col(key)))
-      .withColumn("b_ctr", (col("click_users") + getAlphaUDF(col(key))) / (col("exposure_users") + getAlphaUDF(col(key)) + getBetaUDF(col(key))))
-      .selectExpr(key, "groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", "mean", "variance", "alpha", "beta", "ctr", "b_ctr")
-      .show()
+    for (value <- values) {
+      //计算平均数mean和方差variance
+      val meanAndVarianceMap: Map[String, Array[Double]] = evaluateMeanAndVariance(key, value, themeInfoCtrDF)
+      val alphaAndBetaMap: Map[String, Array[Double]] = evaluateAlphaAndBeta(meanAndVarianceMap)
 
+      //通过实名函数定义UDF
+      val getMeanUDF = udf((key: String) => meanAndVarianceMap.getOrElse(key, Array(0.0, 0.0))(0))
+      val getVarianceUDF = udf((key: String) => meanAndVarianceMap.getOrElse(key, Array(0.0, 0.0))(1))
+      val getAlphaUDF = udf((key: String) => alphaAndBetaMap.getOrElse(key, Array(0.0, 0.0))(0))
+      val getBetaUDF = udf((key: String) => alphaAndBetaMap.getOrElse(key, Array(0.0, 0.0))(1))
+
+      if (value.equals("ctr")) {
+        tmp_themeInfoCtrDF = tmp_themeInfoCtrDF
+          .withColumn(value+"_mean", getMeanUDF(col(key)))
+          .withColumn(value+"_var",getVarianceUDF(col(key)))
+          .withColumn(value+"_a", getAlphaUDF(col(key)))
+          .withColumn(value+"_b",getBetaUDF(col(key)))
+      } else {
+        tmp_themeInfoCtrDF = tmp_themeInfoCtrDF
+          .withColumn(value+"_a", getAlphaUDF(col(key)))
+          .withColumn(value+"_b",getBetaUDF(col(key)))
+      }
+    }
+
+    tmp_themeInfoCtrDF = tmp_themeInfoCtrDF.select(key,"ctr_mean","ctr_var","ctr_a","ctr_b","cvr_a","cvr_b","ctcvr_a","ctcvr_b","arpu_a","arpu_b")
+
+    //关联themeInfoCtrDF，计算贝叶斯平滑修正后的ctr、cvr、ctcvr、arpu
+    val resultDF = themeInfoCtrDF.join(tmp_themeInfoCtrDF,Seq(key))
+      .select(key,"groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", "payment_amt",
+        "ctr", "cvr", "ctcvr", "arpu",
+        "ctr_mean","ctr_var",
+        "ctr_a","ctr_b","cvr_a","cvr_b","ctcvr_a","ctcvr_b","arpu_a","arpu_b")
+      .withColumn("b_ctr",(col("click_users")+col("ctr_a")) / (col("exposure_users")+col("ctr_a")+col("ctr_b")))
+      .withColumn("b_cvr",(col("payment_users")+col("cvr_a")) / (col("click_users")+col("cvr_a")+col("cvr_b")))
+      .withColumn("b_ctcvr",(col("payment_users")+col("ctcvr_a")) / (col("exposure_users")+col("ctcvr_a")+col("ctcvr_b")))
+      .withColumn("b_arpu",(col("payment_amt")+col("ctcvr_a")) / (col("exposure_users")+col("ctcvr_a")+col("ctcvr_b")))
+      .select(key,"groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", "payment_amt",
+        "ctr", "cvr", "ctcvr", "arpu",
+        "ctr_mean","ctr_var",
+        "ctr_a","ctr_b",
+        "b_ctr","b_cvr","b_ctcvr","b_arpu")
+
+    resultDF.show()
   }
+
 
   def evaluateAlphaAndBeta(meanAndVarianceMap: Map[String, Array[Double]]): Map[String, Array[Double]] = {
     meanAndVarianceMap.map {
@@ -75,12 +108,12 @@ object BayesParam {
     }
   }
 
-  def evaluateMeanAndVariance(key: String, themeInfoCtrDF: DataFrame): Map[String, Array[Double]] = {
+  def evaluateMeanAndVariance(key: String, value: String, themeInfoCtrDF: DataFrame): Map[String, Array[Double]] = {
     import org.apache.spark.sql.functions._
     val tmpDF = themeInfoCtrDF.withColumn(key, concat_ws("-", col("groupId"), col("theme_ver")))
-      .selectExpr(key, "groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", "ctr")
+      .selectExpr(key, "groupId", "themeId", "theme_ver", "price_level", "exposure_users", "click_users", "payment_users", value)
       .groupBy(key)
-      .agg(avg("ctr") as "mean", variance("ctr") as "variance")
+      .agg(avg(value) as "mean", variance(value) as "variance")
       .selectExpr(key, "mean", "variance")
     val rdd = tmpDF.rdd
 
