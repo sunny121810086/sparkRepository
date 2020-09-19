@@ -39,6 +39,10 @@ object SqlFunctions {
         |group by device_id,theme_id,theme_ver,oper_date
       """.stripMargin
 
-    spark.sql(sql01).show()
+    val sql02 = "select from_unixtime(unix_timestamp('20200919','yyyyMMdd'),'yyyy-MM-dd')"
+    val sql03 = "select to_date('2020-06-07 11:11:11','yyyy-MM-dd HH:mm:ss')"
+    val sql04 = "select date_format('2020-06-06 11:11:11','yyyy-MM')"
+    val sql05 = "select datediff('2020-09-19',from_unixtime(unix_timestamp('20200915','yyyyMMdd'),'yyyy-MM-dd'))"
+    spark.sql(sql03).show()
   }
 }
