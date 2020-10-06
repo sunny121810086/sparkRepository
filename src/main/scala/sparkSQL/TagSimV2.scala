@@ -1,9 +1,14 @@
 package sparkSQL
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
+import scala.collection.mutable
+
 object TagSimV2 {
+
+  private val logger = Logger.getLogger(TagSimV2.getClass)
 
   def main(args: Array[String]): Unit = {
     val spark = SparkSession
@@ -12,6 +17,7 @@ object TagSimV2 {
       .master("local[2]")
       .getOrCreate()
     val sc = spark.sparkContext
+
 
     val themeInfoRDD = sc.textFile("F:\\ideaProjects\\spark-version2\\src\\main\\resources\\tagsim\\theme_info")
     val themeHeatInfoRDD = sc.textFile("F:\\ideaProjects\\spark-version2\\src\\main\\resources\\tagsim\\theme_heat_info")
@@ -106,7 +112,7 @@ object TagSimV2 {
     tagSimScoreInfoDF.rdd.map {
       case Row(tag: String, simTag: String, score: Double) => {
         val key = s"$tag-$simTag"
-        (tag, score)
+        (key, score)
       }
     }.collect().toMap
   }
@@ -117,13 +123,16 @@ object TagSimV2 {
     }.collect().toMap
   }
 
-  def getTagAndRecTagWeightMap(tagSet: Set[String], tagWeightMap: Map[String, Double]): Map[String, Double] = {
-    tagSet.map {
+  def getTagAndRecTagWeightMap(tagSet: Set[String], tagWeightMap: Map[String, Double]): mutable.Map[String, Double] = {
+    import scala.collection.mutable
+    val mmap: mutable.Map[String,Double] = mutable.Map[String,Double]()
+    tagSet.foreach {
       tag => {
         val weight = tagWeightMap.getOrElse(tag, 0.0)
-        (tag, weight)
+        mmap += ((tag, weight))
       }
-    }.toMap
+    }
+    mmap
   }
 
   def roundColWeightScore(roundColWeightScoreDF: DataFrame, themeInfoDF: DataFrame, tagWeightMap: Map[String, Double], tagSimScoreMap: Map[String, Double]) = {
@@ -144,6 +153,7 @@ object TagSimV2 {
             //获取候选表标签权重
             val map2 = getTagAndRecTagWeightMap(recSet, tagWeightMap)
 
+            //两两组合主表和候选表标签，并将相似得分存储内存
             val listBF: mutable.ListBuffer[(String, String, Double)] = new mutable.ListBuffer[(String, String, Double)]
             for (tag1 <- themeSet) {
               for (tag2 <- recSet) {
@@ -154,9 +164,35 @@ object TagSimV2 {
             }
 
             val sortList = listBF.toList.sortBy(_._3).reverse
-            //TODO
+
+            var sumWeight: Double = 0.0
+            var sumScore: Double = 0.0
+            for(tuple <- sortList) {
+              val key1 = tuple._1
+              val key2 = tuple._2
+              val score = tuple._3
+              //主表标签权重
+              val weight1 = map1.getOrElse(key1,0.0)
+              //候选标签权重
+              val weight2 = map2.getOrElse(key2,0.0)
+              logger.error(s"key1:$key1 weight1:$weight1|key2:$key2 weight2:$weight2|score:$score")
+              logger.error(s"sumWeight:$sumWeight sumScore:$sumScore")
+              if(weight1 !=0.0 && weight2 !=0.0) {
+                val minWeight = math.min(weight1,weight2)
+                val tmpWeight1 = weight1 - minWeight
+                val tmpWeight2 = weight2 - minWeight
+                //更新主表和候选表相似标签的权重
+                map1(key1) = tmpWeight1
+                map2(key2) = tmpWeight2
+
+                val tmpScore = minWeight*score
+                sumWeight += minWeight
+                sumScore += tmpScore
+              }
+            }
+            sim = sumScore / sumWeight
           }
-          (theme_id, theme_ver, rec_id, score)
+          (theme_id, theme_ver, rec_id, score + sim)
         }
       }.toDF("theme_id", "theme_ver", "rec_id", "score")
 

@@ -12,7 +12,7 @@ object MutableMap {
     map1.foreach {
       case (x, y) => {
         if (x.length == 7)
-          mutMap += ((x,y))
+          mutMap += ((x, y))
       }
     }
 

@@ -18,6 +18,17 @@ object Test {
     for (i <- 0 to res.length-1) {
       println("i==="+res(i))
     }
+
+    val map1: mutable.Map[String,Int] = mutable.Map[String,Int]()
+    map1 += (("语文",90),("数学",88),("英语",59))
+    println("修改前："+map1)
+    map1("英语") = 66
+    println("修改后："+map1)
+    println("取值："+map1("数学"))
+
+    val map2 = Map(("语文",90),("数学",88),("英语",59))
+   // map2("语文") = 59 不能修改值
+    println("不可变map2: "+map2)
   }
 
 }
