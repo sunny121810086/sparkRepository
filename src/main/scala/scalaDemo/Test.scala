@@ -1,4 +1,5 @@
 package scalaDemo
+
 import scala.collection.mutable
 
 object Test {
@@ -29,6 +30,11 @@ object Test {
     val map2 = Map(("语文",90),("数学",88),("英语",59))
    // map2("语文") = 59 不能修改值
     println("不可变map2: "+map2)
+
+    val hset = new mutable.HashSet[String]
+    hset.add("王语嫣")
+    hset.add("周芷若")
+    println(hset("王语嫣"))
   }
 
 }
