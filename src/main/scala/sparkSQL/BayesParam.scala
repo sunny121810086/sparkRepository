@@ -89,6 +89,8 @@ object BayesParam {
         "b_ctr","b_cvr","b_ctcvr","b_arpu")
 
     resultDF.show()
+
+    spark.stop()
   }
 
 

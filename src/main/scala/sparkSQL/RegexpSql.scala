@@ -50,7 +50,12 @@ object RegexpSql {
         |regexp_extract('http://www.baidu.com','[a-zA-z]+://[^\s]*',0) as url --匹配网址URL
       """.stripMargin
 
-    spark.sql(sql04).show()
+    val sql05 =
+      """
+        |select '星空|射手座' regexp '星空|星辰大海|仙女座'
+      """.stripMargin
+
+    spark.sql(sql05).show()
 
     spark.stop()
   }

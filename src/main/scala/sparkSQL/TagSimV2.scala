@@ -93,6 +93,7 @@ object TagSimV2 {
     val themeTagInfoDF = themeInfoDF.select("theme_id", "theme_ver", "tags")
     //获取标签权重
     val tagWeightMap = getTagWeightMap(tagWeightInfoDF)
+
     //获取标签相似得分
     val tagSimScoreMap = getTagSimScoreMap(tagSimScoreInfoDF)
     //初始化得分
@@ -106,6 +107,10 @@ object TagSimV2 {
     //考虑热度因素，进行最终得分计算
     val colWeightAndHeatScoreDF = colWeightAndHeatScore(roundColWeightScoreDF, themeHeatInfoDF)
     colWeightAndHeatScoreDF.show()
+
+    Thread.sleep(Long.MaxValue)
+
+    spark.stop()
   }
 
   def getTagSimScoreMap(tagSimScoreInfoDF: DataFrame) = {
