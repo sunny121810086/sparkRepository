@@ -13,11 +13,13 @@ import scala.io._
 
 object Demo7 {
   def main(args: Array[String]): Unit = {
-    val arr = new Array[String](10)
-    for (i <- 0 to 9) {
+    val num = StdIn.readLine().toInt
+    val arr = new Array[String](num)
+    for (i <- 0 to arr.length-1) {
       arr(i) = StdIn.readLine()
     }
-     val res = arr.filter(x => x.matches("[a-zA-Z]+")).sortBy(x => x)
+    // val res = arr.filter(x => x.matches("[a-zA-Z]+")).sortBy(x => x)
+    val res = arr.sortWith(_ < _)
 
     for (c <- res) {
       println(c)

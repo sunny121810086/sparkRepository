@@ -4,7 +4,22 @@ import scala.io._
 
 /**
  * @Author: qwerdf@QAQ
- * @Description: 表示数字
+ * @Description:
+  * 描述
+  * 将一个字符中所有的整数前后加上符号“*”，其他字符保持不变。连续的数字视为一个整数。
+  *
+  *
+  * 数据范围：字符串长度满足 1 \le n \le 100 \1≤n≤100
+  * 输入描述：
+  * 输入一个字符串
+  *
+  * 输出描述：
+  * 字符中所有出现的数字前后加上符号“*”，其他字符保持不变
+  * 示例1
+  * 输入：
+  * Jkdi234klowe90a3
+  * 输出：
+  * Jkdi*234*klowe*90*a*3*
  * @Date: 2022/2/27
  * @Param null:
  * @return: null
@@ -12,24 +27,20 @@ import scala.io._
 
 object Demo20 {
   def main(args: Array[String]): Unit = {
-    val arr = new Array[String](2)
-    for (i <- 0 to 1) {
-      arr(i) = StdIn.readLine()
-    }
-
-    arr.foreach(str => {
+    var line: String = null
+    while({line = StdIn.readLine(); line != null}) {
+      var tmpS = ""
       var res = ""
-      var ch = ' '
-      for (i <- 0 to str.length - 1) {
-        ch = str.charAt(i)
-        if (ch.toString.matches("[0-9]")) {
-          res = res + "*" + ch + "*"
-        } else {
-          res += ch
+      for(i <- 0 to line.length-1) {
+        tmpS = line.charAt(i).toString.replaceAll("\\*","#")
+        if(tmpS.matches("[0-9]")) {
+          res = res + "*" + tmpS + "*"
+        }else {
+          res +=tmpS
         }
       }
-      res = res.replaceAll("\\*{2,}", "")
+      res = res.replaceAll("\\*{2,}","").replaceAll("#","\\*")
       println(res)
-    })
+    }
   }
 }
