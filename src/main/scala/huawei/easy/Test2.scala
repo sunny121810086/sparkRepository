@@ -7,16 +7,19 @@ object Test2 {
     var i = 0
     val arr = new Array[String](4)
     var line: String = null
-    while({line = StdIn.readLine(); line != null}) {
-      if(i <=3) {
+    while ( {
+      line = StdIn.readLine() //同一行多条语句用;号隔开
+      line != null
+    }) {
+      if (i <= 3) {
         arr(i) = line
-        i = i+1
+        i = i + 1
       }
-      if(i==4) {
-        for(x <- arr) {
+      if (i == 4) {
+        for (x <- arr) {
           println(x)
         }
-        i=0
+        i = 0
       }
     }
   }
