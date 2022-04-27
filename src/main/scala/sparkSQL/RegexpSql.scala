@@ -50,12 +50,66 @@ object RegexpSql {
         |regexp_extract('http://www.baidu.com','[a-zA-z]+://[^\s]*',0) as url --匹配网址URL
       """.stripMargin
 
+    //返回true
     val sql05 =
       """
         |select '星空|射手座' regexp '星空|星辰大海|仙女座'
       """.stripMargin
 
-    spark.sql(sql05).show()
+    val sql06 =
+      """
+        |select
+        |up_id
+        |,member_stage
+        |,stage
+        |,if(split(res,'_')[1]='','-1',split(res,'_')[1]) as res
+        |from
+        |(
+        |    select
+        |    up_id
+        |    ,member_stage
+        |    ,if(member_stage regexp '^\\[".+"\\]$',member_stage,'-1') as stage
+        |    from
+        |        (
+        |            select
+        |            '1001' as up_id
+        |            ,'["UserMemberStage_0","UserMemberStage_5"]' as member_stage
+        |
+        |            union all
+        |
+        |            select
+        |            '1002' as up_id
+        |            ,'["UserMemberStage_0"]' as member_stage
+        |
+        |            union all
+        |
+        |            select
+        |            '1003' as up_id
+        |            ,'[]' as member_stage
+        |
+        |            union all
+        |
+        |            select
+        |            '1004' as up_id
+        |            ,'[""]' as member_stage
+        |
+        |            union all
+        |
+        |            select
+        |            '1005' as up_id
+        |            ,NULL as member_stage
+        |
+        |            union all
+        |
+        |            select
+        |            '1006' as up_id
+        |            ,'' as member_stage
+        |        )t1
+        |)t2
+        |lateral view explode(split(regexp_replace(regexp_extract(stage,'^\\[(.+)\\]$',1),'"',''),',')) tmp AS res
+      """.stripMargin
+
+    spark.sql(sql06).show()
 
     spark.stop()
   }
