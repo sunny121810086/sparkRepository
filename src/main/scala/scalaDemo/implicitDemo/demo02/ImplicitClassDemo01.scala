@@ -2,19 +2,19 @@ package scalaDemo.implicitDemo.demo02
 
 object ImplicitClassDemo01 {
 
-  implicit class DataBaseFun01(val mySql: Mysql) {
+  implicit class DataBaseFun01(val mysql: MySql) {
     def insert(): String = {
       s"insert..."
     }
   }
 
   def main(args: Array[String]): Unit = {
-    val mysql = new Mysql
+    val mysql = new MySql
     println(mysql.insert())
   }
 }
 
-class Mysql {
+class MySql {
   val dname: String = "mysql"
 
   def dbState = {

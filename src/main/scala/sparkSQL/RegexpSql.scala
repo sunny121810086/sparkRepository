@@ -109,7 +109,26 @@ object RegexpSql {
         |lateral view explode(split(regexp_replace(regexp_extract(stage,'^\\[(.+)\\]$',1),'"',''),',')) tmp AS res
       """.stripMargin
 
-    spark.sql(sql06).show()
+    val sql07 =
+      """
+        |select
+        |up_id
+        |,regexp_extract(member_stage,'^\\["(.+)"\\]$',1) stage
+        |from
+        |(
+        |    select
+        |    '1001' as up_id
+        |    ,'["Stage_0"]' as member_stage
+        |
+        |    union all
+        |
+        |    select
+        |    '1002' as up_id
+        |    ,'[""]' as member_stage
+        |)t1
+      """.stripMargin
+
+    spark.sql(sql07).show()
 
     spark.stop()
   }
