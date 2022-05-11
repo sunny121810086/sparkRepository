@@ -1,6 +1,6 @@
 package scalaDemo
 
-object ClassTest {
+object CompanionObject {
   def main(args: Array[String]): Unit = {
     val person = new Person()
     val student = new Student
@@ -18,11 +18,14 @@ class Person {
   protected var gender1: String = _ //当前类及其子类对象可以访问
   protected[scalaDemo] var gender2: String = _ //String和引用类型的变量，使用"_"初始化时全部为null
   private var age: Int = _  //val修饰的属性，字节码文件只有getter方法，而var修饰的属性，字节码文件既有setter又有getter方法
+  println(Person.height) //访问伴生对象的私有属性--类名访问
 }
 
 object Person {
+  private var height: Double = _
   private val person = new Person
-  person.privateDescription //伴生对象可以访问伴生类私有属性
+  person.age //访问伴生类私有属性，需要先new一个对象
+  //Person.age  //无法通过类名访问
 }
 
 class Student extends Person {
