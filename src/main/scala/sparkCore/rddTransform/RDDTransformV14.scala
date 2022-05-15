@@ -34,5 +34,7 @@ object RDDTransformV14 {
     val rdd01B = rdd01A.map(tup => (tup._1, tup._2._1 / tup._2._2.toDouble))
     println(rdd01A.collect.toBuffer) //ArrayBuffer((BB,(39,3)), (AA,(14,3)))
     println(rdd01B.collect.toBuffer) //ArrayBuffer((BB,13.0), (AA,4.666666666666667))
+
+    sc.stop()
   }
 }

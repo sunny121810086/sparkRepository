@@ -28,5 +28,7 @@ object RDDTransformV7 {
     val rdd01A = rdd01.distinct()
 
     println(rdd01A.collect.mkString(","))
+
+    sc.stop()
   }
 }

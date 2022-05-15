@@ -33,5 +33,6 @@ object RDDTransformV12 {
     //按照一定规则分组后，会将数据整体放到一个组中
     val rdd01C: RDD[(String, Iterable[(String, Int)])] = rdd01.groupBy(_._1)
 
+    sc.stop()
   }
 }

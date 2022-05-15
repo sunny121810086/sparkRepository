@@ -66,5 +66,6 @@ object RDDTransformV13 {
     val rdd02A = rdd01.foldByKey(0)(_ + _)
     println(rdd02A.collect.toBuffer) //ArrayBuffer((BB,39), (AA,14))
 
+    sc.stop()
   }
 }

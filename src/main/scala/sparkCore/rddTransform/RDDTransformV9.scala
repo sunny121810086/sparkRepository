@@ -29,5 +29,7 @@ object RDDTransformV9 {
     val rdd01A = rdd01.sortBy(str => str.split(":")(1), false)
     val rdd01B = rdd01.sortBy(_.split(":")(1),false)
     println(rdd01B.collect.mkString("\n"))
+
+    sc.stop()
   }
 }

@@ -2,7 +2,7 @@ package scalaDemo
 
 object ConstractParam {
   def main(args: Array[String]): Unit = {
-    val s = new Student2("sunny", "male", 28,172)
+    val s = new Student2("sunny", "male", 28, 172)
     println(s"${s.name}\n${s.gender}\n${s.age}")
   }
 }

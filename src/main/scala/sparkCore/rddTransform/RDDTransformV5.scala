@@ -31,6 +31,7 @@ object RDDTransformV5 {
     val rdd02C = rdd02.groupBy(_.split("_")(0))
     println(rdd02C.collect.toBuffer) //ArrayBuffer((华为,CompactBuffer(华为_A, 华为_B)), (小米,CompactBuffer(小米_E, 小米_F)), (苹果,CompactBuffer(苹果_C, 苹果_D)))
 
+    sc.stop()
   }
 
   val groupFunc01: Int => Int = num => {

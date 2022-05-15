@@ -30,5 +30,7 @@ object RDDTransformV10 {
     val rdd03D = rdd01.zip(rdd02)
     println(rdd03D.collect.mkString(",")) //(1,4),(2,5),(3,6),(4,7),(5,8)
 
+    sc.stop()
+
   }
 }

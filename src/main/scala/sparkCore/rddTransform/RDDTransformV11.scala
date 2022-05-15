@@ -50,5 +50,7 @@ object RDDTransformV11 {
     }
     println(rdd01B.collect.toBuffer) //ArrayBuffer((0,List((BB,3))), (1,List((AA,1), (AA,2))), (2,List((CC,4))))
 
+    sc.stop()
+
   }
 }

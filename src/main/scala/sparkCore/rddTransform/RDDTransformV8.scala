@@ -36,5 +36,7 @@ object RDDTransformV8 {
 
     println(rdd01C.collect.mkString(","))
 
+    sc.stop()
+
   }
 }
