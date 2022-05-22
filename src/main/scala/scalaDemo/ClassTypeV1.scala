@@ -6,13 +6,18 @@ object ClassTypeV1 {
     val a2 = new Child07A
     val a3 = new GrandSonA
     val a4 = new GrandSonSonA
-    getInfo1[Child07A](a2)
+    val a5 = new Father07B
+
+    getInfo1(a4) //当前类型：class scalaDemo.GrandSonSonA
+    getInfo1(a5) //当前类型：class scalaDemo.Father07B
   }
 
   def getInfo1[T >: GrandSonA](a: T) = {
     println(s"当前类型：${a.getClass}")
   }
 }
+
+class Father07B {}
 
 class Father07A {}
 
