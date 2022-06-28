@@ -16,6 +16,7 @@ object WordCount {
     val outputPath = args(1)
 
     val lineRDD = sc.textFile(inputPath)
+    lineRDD.getNumPartitions
 
     val arrayRDD = lineRDD.map {
       line => {

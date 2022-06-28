@@ -1,21 +1,21 @@
 package scalaDemo.boundType
 
+
 object BoundTypeV2 {
   def main(args: Array[String]): Unit = {
-    val child = new Child08
-    val father = new Father08
-    val comm01: Comm01[Father08] = new Comm01[Child08](child)
-    val comm02: Comm02[Child08] = new Comm02[Father08](father)
-
+    val class01 = new EnglishClass[SeasonEnmu.SeasonEnmu,String,String](SeasonEnmu.spring,"1001","初级班")
+    println(class01.getInfo)
   }
 }
 
-class Father08
+//给类添加泛型
+class EnglishClass[A, B, C](val season: A, val cName: B, val cType: C) {
+  def getInfo = s"season：$season\ncName：$cName\ncType：$cType"
+}
 
-class Child08 extends Father08
+//枚举类型
+object SeasonEnmu extends Enumeration {
+  type SeasonEnmu = Value
+  val spring,summer,autumn,winter = Value
+}
 
-//协变
-class Comm01[+T](t: T)
-
-//逆变
-class Comm02[-T](t: T)

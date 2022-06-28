@@ -30,8 +30,8 @@ object Demo18 {
     var temp = 0
 
     if(i <= j ) {
-      temp = arr(i).toInt
-      while (i != j) {
+      temp = arr(left).toInt
+      while (i < j) {
         while (i < j && temp <= arr(j).toInt) {
           j = j-1
         }

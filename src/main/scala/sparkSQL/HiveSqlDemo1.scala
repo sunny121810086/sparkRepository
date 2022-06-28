@@ -149,6 +149,29 @@ object HiveSqlDemo1 {
         |group by up_id,item_id,time_interval
       """.stripMargin
 
-    spark.sql(sql04).show()
+    val sql05 =
+      """
+        |select
+        |    pt_d
+        |    ,date_format(pt_d,'MM')  as month
+        |    ,pay_amt
+        |    ,sum(pay_amt)over(partition by date_format(pt_d,'MM')) as month_amt
+        |from
+        |(
+        |    select '2022-05-20' as pt_d,100 as pay_amt
+        |    union all
+        |    select '2022-05-21' as pt_d,200 as pay_amt
+        |    union all
+        |    select '2022-05-22' as pt_d,300 as pay_amt
+        |    union all
+        |    select '2022-06-20' as pt_d,400 as pay_amt
+        |    union all
+        |    select '2022-06-21' as pt_d,500 as pay_amt
+        |    union all
+        |    select '2022-06-22' as pt_d,600 as pay_amt
+        |)t1
+      """.stripMargin
+
+    spark.sql(sql05).show()
   }
 }
